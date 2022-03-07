@@ -1,7 +1,6 @@
 import 'package:bloc_movie_my/src/blocs/infinity_blocs/infinity_bloc.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_bloc.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_event.dart';
-import 'package:bloc_movie_my/src/models/movie_model.dart';
 import 'package:bloc_movie_my/src/ui/search_page.dart';
 import 'package:bloc_movie_my/src/widgets/movie_list_item.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +15,7 @@ class MoviesPage extends StatefulWidget {
 }
 
 class _MoviesPageState extends State<MoviesPage> {
-  List<MovieModel> _movie = [];
+  // List<MovieModel> _movie = [];
   final _scrollController = ScrollController();
   TextEditingController editingController = TextEditingController();
   late SearchBloc _searchBloc;
@@ -49,14 +48,14 @@ class _MoviesPageState extends State<MoviesPage> {
             Container(
               child: BlocListener<InfinityBloc, InfinityState>(
                 listener: (context, state) {
-                  if (state.status == MovieStatus.success) {
-                    if (_movie.length == 0) {
-                      _movie.addAll(state.movieModel);
-                    } else if (_movie.length > 0) {
-                      _movie.clear();
-                      _movie.addAll(state.movieModel);
-                    }
-                  }
+                  // if (state.status == MovieStatus.success) {
+                  //   if (_movie.length == 0) {
+                  //     _movie.addAll(state.movieModel);
+                  //   } else if (_movie.length > 0) {
+                  //     _movie.clear();
+                  //     _movie.addAll(state.movieModel);
+                  //   }
+                  // }
                   // print(state.status.toString());
                 },
                 child: BlocBuilder<InfinityBloc, InfinityState>(
@@ -77,7 +76,7 @@ class _MoviesPageState extends State<MoviesPage> {
                         return Expanded(
                           child: RefreshIndicator(
                             onRefresh: () async {
-                              _movie = [];
+                              // _movie = [];
                               context.read<InfinityBloc>().add(Initial());
                               context
                                   .read<InfinityBloc>()
@@ -88,7 +87,7 @@ class _MoviesPageState extends State<MoviesPage> {
                             },
                             child: ListView.builder(
                               itemBuilder: (BuildContext context, int index) {
-                                return index >= _movie.length
+                                return index >= state.movieModel.length
                                     ? Center(
                                         child: SizedBox(
                                           height: 24,
@@ -98,7 +97,7 @@ class _MoviesPageState extends State<MoviesPage> {
                                         ),
                                       )
                                     : MovieListItem(
-                                        movie: _movie[index],
+                                        movie: state.movieModel[index],
                                         index: index,
                                       );
                               },

@@ -74,7 +74,7 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _searchbar() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(10.0),
       child: TextField(
         controller: editingController,
         autocorrect: false,
@@ -85,13 +85,16 @@ class _SearchPageState extends State<SearchPage> {
           );
         },
         decoration: InputDecoration(
-          prefixIcon: new IconButton(
-            icon: new Icon(Icons.arrow_back),
-            onPressed: () {
-              editingController.text = '';
-              _searchBloc.add(const TextChanged(text: ''));
-              Navigator.pop(context);
-            },
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(right: 20),
+            child: new IconButton(
+              icon: new Icon(Icons.arrow_back, size: 25),
+              onPressed: () {
+                editingController.text = '';
+                _searchBloc.add(const TextChanged(text: ''));
+                Navigator.pop(context);
+              },
+            ),
           ),
           suffixIcon: GestureDetector(
             onTap: _onClearTapped,
@@ -137,10 +140,49 @@ class _SearchResultItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(item.title),
-      leading: CircleAvatar(
-        backgroundImage:
-            NetworkImage('https://image.tmdb.org/t/p/w185${item.urlImage}'),
+      // leading: CircleAvatar(
+      //   backgroundImage: NetworkImage(
+      //     '${item.urlImage}',
+      //   ),
+      //   onBackgroundImageError: (_, __) {},
+      // )
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(25.0),
+        child: FadeInImage.assetNetwork(
+          // item.urlImage,
+          // loadingBuilder: (context, child, loadingProgress) {
+          //   if (loadingProgress == null) return child;
+          //   return Image.asset('assets/images/movie.jpg');
+          // },
+          // fit: BoxFit.cover,
+          height: 40,
+          width: 40,
+          // errorBuilder: (context, error, stackTrace) =>
+          //     FittedBox(child: Image.asset('assets/images/movie.jpg')),
+          placeholder: 'assets/images/loading.gif',
+          placeholderCacheHeight: 10,
+          placeholderCacheWidth: 10,
+          placeholderFit: BoxFit.cover,
+          placeholderScale: 0.5,
+          fit: BoxFit.cover,
+
+          image: item.urlImage,
+          imageErrorBuilder: (_, __, ___) {
+            return Icon(
+              Icons.movie,
+              size: 30,
+            );
+          },
+        ),
       ),
+
+      // leading: ExtendedImage.network(
+      //   'https://image.tmdb.org/t/p/w185${item.urlImage}',
+      //   fit: BoxFit.fill,
+      //   cache: false,
+      //   border: Border.all(color: Colors.red, width: 1.0),
+      //   borderRadius: BorderRadius.all(Radius.circular(30.0)),
+      // ),
     );
   }
 }

@@ -15,14 +15,13 @@ class MovieListItem extends StatelessWidget {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundImage: NetworkImage(
-                  'https://image.tmdb.org/t/p/w185${movie.urlImage}'),
+              backgroundImage: NetworkImage('${movie.urlImage}'),
             ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(right: 10, left: 20),
                 child: Text(
-                  movie.title * 2,
+                  movie.title,
                   maxLines: 1,
                   overflow: TextOverflow.fade,
                   softWrap: false,
