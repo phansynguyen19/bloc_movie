@@ -40,7 +40,6 @@ class MovieListItem extends StatelessWidget {
         // ),
         leading: Text(
           (index + 1).toString(),
-          style: Theme.of(context).textTheme.headline1,
         ),
       ),
     );

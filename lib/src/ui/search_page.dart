@@ -74,7 +74,7 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _searchbar() {
     return Padding(
-      padding: const EdgeInsets.all(10.0),
+      padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
       child: TextField(
         controller: editingController,
         autocorrect: false,
@@ -140,12 +140,6 @@ class _SearchResultItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(item.title),
-      // leading: CircleAvatar(
-      //   backgroundImage: NetworkImage(
-      //     '${item.urlImage}',
-      //   ),
-      //   onBackgroundImageError: (_, __) {},
-      // )
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(25.0),
         child: FadeInImage.assetNetwork(

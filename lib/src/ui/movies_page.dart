@@ -1,6 +1,10 @@
+import 'package:bloc_movie_my/src/blocs/authentication_blocs/authentication_bloc.dart';
+import 'package:bloc_movie_my/src/blocs/authentication_blocs/authentication_event.dart';
+import 'package:bloc_movie_my/src/blocs/authentication_blocs/authentication_state.dart';
 import 'package:bloc_movie_my/src/blocs/infinity_blocs/infinity_bloc.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_bloc.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_event.dart';
+import 'package:bloc_movie_my/src/ui/login_page.dart';
 import 'package:bloc_movie_my/src/ui/search_page.dart';
 import 'package:bloc_movie_my/src/widgets/movie_list_item.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +23,9 @@ class _MoviesPageState extends State<MoviesPage> {
   final _scrollController = ScrollController();
   TextEditingController editingController = TextEditingController();
   late SearchBloc _searchBloc;
+  late AuthenticationBloc _authenticationBloc;
+
+  String? username;
   @override
   void initState() {
     /// Interact with the `bloc` to trigger `state` changes.
@@ -26,6 +33,7 @@ class _MoviesPageState extends State<MoviesPage> {
     super.initState();
     _scrollController.addListener(_onScroll);
     _searchBloc = context.read<SearchBloc>();
+    _authenticationBloc = context.read<AuthenticationBloc>();
   }
 
   @override
@@ -36,15 +44,58 @@ class _MoviesPageState extends State<MoviesPage> {
 
   @override
   Widget build(BuildContext context) {
+    GlobalKey<ScaffoldState> secondScreenKey = GlobalKey<ScaffoldState>();
     return GestureDetector(
       child: Scaffold(
+        key: secondScreenKey,
         appBar: AppBar(
           title: const Text('Trending Movies'),
           backgroundColor: Theme.of(context).primaryColor,
+          actions: [
+            IconButton(
+              onPressed: () {
+                _authenticationBloc.add(LogoutPressed());
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (context) => LoginPage(),
+                  ),
+                  (route) => false,
+                );
+              },
+              icon: Icon(Icons.logout),
+            )
+          ],
         ),
         body: Column(
           children: [
+            BlocBuilder<AuthenticationBloc, AuthenticationState>(
+              builder: (context, state) {
+                if (state is AuthenticationStateSuccess) {
+                  return Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'Hi ' + state.user.username,
+                          style: TextStyle(color: Colors.red, fontSize: 22),
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Container();
+                }
+              },
+            ),
             _searchbar(),
+
+            // Container(
+            //   child: BlocBuilder<LoginBloc, LoginState>(
+            //     builder: (context, state) {
+            //       return Text(state.user!.username.toString());
+            //     },
+            //   ),
+            // ),
             Container(
               child: BlocListener<InfinityBloc, InfinityState>(
                 listener: (context, state) {
@@ -160,53 +211,15 @@ class _MoviesPageState extends State<MoviesPage> {
         },
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search),
-          suffixIcon: GestureDetector(
-            onTap: _onClearTapped,
-            child: const Icon(Icons.clear),
-          ),
+          // suffixIcon: GestureDetector(
+          //   onTap: _onClearTapped,
+          //   child: const Icon(Icons.clear),
+          // ),
           border: InputBorder.none,
           hintText: 'Enter a search',
         ),
       ),
     );
-  }
-
-  // Widget _handleUserResponseList(state) {
-  //   // var _movieState = state as GetMovieState;
-
-  //   if (state is LoadingState) {
-  //     return const CircularProgressIndicator();
-  //   }
-  //   if (state is ErrorState) {
-  //     return Text(state.error);
-  //   }
-  //   if (state is LoadedState) {
-  //     return state.items.isEmpty
-  //         ? const Text('No Results')
-  //         : Expanded(
-  //             child: ListView.builder(
-  //               itemCount: state.items.length,
-  //               itemBuilder: (BuildContext context, int index) {
-  //                 MovieModel res = state.items[index];
-  //                 return ListTile(
-  //                   title: Text(res.title),
-  //                   subtitle: Text((index + 1).toString()),
-  //                   leading: CircleAvatar(
-  //                     backgroundImage: NetworkImage(
-  //                         'https://image.tmdb.org/t/p/w185${res.urlImage}'),
-  //                   ),
-  //                 );
-  //               },
-  //             ),
-  //           );
-  //   } else {
-  //     return Container();
-  //   }
-  // }
-
-  void _onClearTapped() {
-    editingController.text = '';
-    _searchBloc.add(const TextChanged(text: ''));
   }
 
   void _onScroll() {
