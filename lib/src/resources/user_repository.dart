@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:bloc_movie_my/src/user/models/user.dart';
 import 'package:dio/dio.dart';
 

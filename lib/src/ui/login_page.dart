@@ -1,6 +1,7 @@
 import 'package:bloc_movie_my/src/blocs/authentication_blocs/authentication_bloc.dart';
 import 'package:bloc_movie_my/src/blocs/authentication_blocs/authentication_event.dart';
 import 'package:bloc_movie_my/src/blocs/authentication_blocs/authentication_state.dart';
+import 'package:bloc_movie_my/src/blocs/google_authen_blocs/google_authen_bloc.dart';
 import 'package:bloc_movie_my/src/ui/movies_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -60,8 +61,9 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.only(right: 20),
                   child: Icon(Icons.people),
                 ),
-                border: InputBorder.none,
+                // border: InputBorder.none,
                 hintText: 'Enter username',
+                labelText: 'Username',
               ),
             ),
           ),
@@ -84,9 +86,12 @@ class _LoginPageState extends State<LoginPage> {
                   padding: const EdgeInsets.only(right: 20),
                   child: Icon(Icons.password),
                 ),
-                border: InputBorder.none,
+                // border: InputBorder.none,
                 hintText: 'Enter password',
+
+                labelText: 'Password',
               ),
+              obscureText: true,
             ),
           ),
           const Padding(padding: EdgeInsets.all(12)),
@@ -98,8 +103,9 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: () {
                     _authenticationBloc.add(
                       LoginPressed(
-                          username: usernameController.text,
-                          password: passwordController.text),
+                        username: usernameController.text,
+                        password: passwordController.text,
+                      ),
                     );
                   },
                 );
@@ -155,7 +161,45 @@ class _LoginPageState extends State<LoginPage> {
               }
             },
             child: Container(),
-          )
+          ),
+          SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 80),
+            child: InkWell(
+              onTap: () {
+                BlocProvider.of<AuthBloc>(context).add(
+                  GoogleSignInRequested(),
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Colors.grey,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        BlocProvider.of<AuthBloc>(context).add(
+                          GoogleSignInRequested(),
+                        );
+                      },
+                      icon: Image.network(
+                        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/1200px-Google_%22G%22_Logo.svg.png",
+                        height: 30,
+                        width: 30,
+                      ),
+                    ),
+                    Text('Login with Google')
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
