@@ -18,6 +18,9 @@ class SearchRepository {
           (json) => MovieModel(
             title: json['title'],
             urlImage: 'https://image.tmdb.org/t/p/w185${json['poster_path']}',
+            backdrop_path:
+                'https://image.tmdb.org/t/p/w185${json['backdrop_path']}',
+            overview: json['overview'],
           ),
         ),
       );

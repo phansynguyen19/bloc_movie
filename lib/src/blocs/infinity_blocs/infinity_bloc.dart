@@ -32,7 +32,7 @@ class InfinityBloc extends Bloc<InfinityEvent, InfinityState> {
       transformer: throttleDroppable(throttleDuration),
     );
   }
-
+  int index = 1;
   Future<void> _onRefresh(Initial event, Emitter<InfinityState> emit) async {
     emit(
       state.copyWith(
@@ -48,7 +48,7 @@ class InfinityBloc extends Bloc<InfinityEvent, InfinityState> {
     final _movieRepository = MovieRepository(Dio());
     if (state.hasReachedMax) return;
     try {
-      int index = 1;
+      // int index = 1;
       if (state.status == MovieStatus.initial) {
         final movie = await _movieRepository.getMoviesByPage();
         print(movie.length);
@@ -70,6 +70,7 @@ class InfinityBloc extends Bloc<InfinityEvent, InfinityState> {
                 hasReachedMax: false,
               ),
             );
+      print(index);
       print(state.movieModel.length);
     } catch (e) {
       emit(state.copyWith(status: MovieStatus.failure));

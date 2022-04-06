@@ -1,7 +1,9 @@
+import 'package:bloc_movie_my/app_localozation.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_bloc.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_event.dart';
 import 'package:bloc_movie_my/src/blocs/search_blocs/search_state.dart';
 import 'package:bloc_movie_my/src/models/movie_model.dart';
+import 'package:bloc_movie_my/src/ui/movie_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,7 +15,7 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  GlobalKey<ScaffoldState> searchPage = GlobalKey<ScaffoldState>();
+  // GlobalKey<ScaffoldState> searchPage = GlobalKey<ScaffoldState>();
   TextEditingController editingController = TextEditingController();
   late SearchBloc _searchBloc;
 
@@ -32,22 +34,12 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    String search_text =
+        AppLocalization.of(context).getTranslatedValues('Search_text');
     return Scaffold(
-      key: searchPage,
-      // appBar: AppBar(
-      //   title: Text('Search Page'),
-      //   leading: new IconButton(
-      //     icon: new Icon(Icons.arrow_back),
-      //     onPressed: () {
-      //       editingController.text = '';
-      //       _searchBloc.add(const TextChanged(text: ''));
-      //       Navigator.pop(context);
-      //     },
-      //   ),
-      // ),
       body: Column(
         children: [
-          _searchbar(),
+          _searchbar(search_text, context),
           BlocBuilder<SearchBloc, SearchState>(builder: (context, state) {
             return _searchBody(state);
           })
@@ -72,7 +64,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  Widget _searchbar() {
+  Widget _searchbar(String search_text, BuildContext searchContext) {
     return Padding(
       padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
       child: TextField(
@@ -92,7 +84,7 @@ class _SearchPageState extends State<SearchPage> {
               onPressed: () {
                 editingController.text = '';
                 _searchBloc.add(const TextChanged(text: ''));
-                Navigator.pop(context);
+                Navigator.pop(searchContext);
               },
             ),
           ),
@@ -101,7 +93,7 @@ class _SearchPageState extends State<SearchPage> {
             child: const Icon(Icons.clear),
           ),
           border: InputBorder.none,
-          hintText: 'Enter a search',
+          hintText: search_text,
         ),
       ),
     );
@@ -138,45 +130,54 @@ class _SearchResultItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(item.title),
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(25.0),
-        child: FadeInImage.assetNetwork(
-          // item.urlImage,
-          // loadingBuilder: (context, child, loadingProgress) {
-          //   if (loadingProgress == null) return child;
-          //   return Image.asset('assets/images/movie.jpg');
-          // },
-          // fit: BoxFit.cover,
-          height: 40,
-          width: 40,
-          // errorBuilder: (context, error, stackTrace) =>
-          //     FittedBox(child: Image.asset('assets/images/movie.jpg')),
-          placeholder: 'assets/images/loading.gif',
-          placeholderCacheHeight: 10,
-          placeholderCacheWidth: 10,
-          placeholderFit: BoxFit.cover,
-          placeholderScale: 0.5,
-          fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => MovieDetailPage(movie: item),
+          ),
+        );
+      },
+      child: ListTile(
+        title: Text(item.title),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(25.0),
+          child: FadeInImage.assetNetwork(
+            // item.urlImage,
+            // loadingBuilder: (context, child, loadingProgress) {
+            //   if (loadingProgress == null) return child;
+            //   return Image.asset('assets/images/movie.jpg');
+            // },
+            // fit: BoxFit.cover,
+            height: 40,
+            width: 40,
+            // errorBuilder: (context, error, stackTrace) =>
+            //     FittedBox(child: Image.asset('assets/images/movie.jpg')),
+            placeholder: 'assets/images/loading.gif',
+            placeholderCacheHeight: 10,
+            placeholderCacheWidth: 10,
+            placeholderFit: BoxFit.cover,
+            placeholderScale: 0.5,
+            fit: BoxFit.cover,
 
-          image: item.urlImage,
-          imageErrorBuilder: (_, __, ___) {
-            return Icon(
-              Icons.movie,
-              size: 30,
-            );
-          },
+            image: item.urlImage,
+            imageErrorBuilder: (_, __, ___) {
+              return Icon(
+                Icons.movie,
+                size: 30,
+              );
+            },
+          ),
         ),
-      ),
 
-      // leading: ExtendedImage.network(
-      //   'https://image.tmdb.org/t/p/w185${item.urlImage}',
-      //   fit: BoxFit.fill,
-      //   cache: false,
-      //   border: Border.all(color: Colors.red, width: 1.0),
-      //   borderRadius: BorderRadius.all(Radius.circular(30.0)),
-      // ),
+        // leading: ExtendedImage.network(
+        //   'https://image.tmdb.org/t/p/w185${item.urlImage}',
+        //   fit: BoxFit.fill,
+        //   cache: false,
+        //   border: Border.all(color: Colors.red, width: 1.0),
+        //   borderRadius: BorderRadius.all(Radius.circular(30.0)),
+        // ),
+      ),
     );
   }
 }

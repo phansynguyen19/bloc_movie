@@ -32,10 +32,10 @@ class App extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) => InfinityBloc()..add(MovieFetched()),
+            create: (_) => InfinityBloc()..add(MovieFetched()),
           ),
           BlocProvider(
-            create: (context) => SearchBloc(
+            create: (_) => SearchBloc(
               SearchStateEmpty(),
             ),
           ),
@@ -65,7 +65,7 @@ class App extends StatelessWidget {
             ],
             supportedLocales: [
               Locale('en', ''), // English, no country code
-              Locale('vi', ''), // Spanish, no country code
+              Locale('vi', ''), // VietNam, no country code
             ],
             themeMode: ThemeMode.light,
             title: 'Flutter Demo',
@@ -93,7 +93,7 @@ class App extends StatelessWidget {
               builder: (context, snapshot) {
                 // If the snapshot has user data, then they're already signed in. So Navigating to the Dashboard.
                 if (snapshot.hasData) {
-                  return const MoviesPage();
+                  return MoviesPage();
                 }
                 // Otherwise, they're not signed in. Show the sign in page.
                 return LoginPage();

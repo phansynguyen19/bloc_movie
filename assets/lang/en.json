@@ -1,5 +1,6 @@
 {
-    "title_movie_page": "Trending Movies",
-    "Search_text": "Enter a search",
-    "Hi_text": "Hi"
-  }
+  "title_movie_page": "Trending Movies",
+  "Search_text": "Enter a search",
+  "Hi_text": "Hi",
+  "logout_text": "Logout"
+}
