@@ -62,238 +62,247 @@ class _MoviesPageState extends State<MoviesPage> {
         AppLocalization.of(context).getTranslatedValues('logout_text');
     GlobalKey<ScaffoldState> secondScreenKey = GlobalKey<ScaffoldState>();
     return Scaffold(
-      drawer: Drawer(
-        // Add a ListView to the drawer. This ensures the user can scroll
-        // through the options in the drawer if there isn't enough vertical
-        // space to fit everything.
-        child: ListView(
-          // Important: Remove any padding from the ListView.
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: user_gg != null
-                  ? Padding(
-                      padding: EdgeInsets.only(left: 0),
-                      child: Row(
-                        children: [
-                          user_gg?.photoURL != null
-                              ? CircleAvatar(
-                                  backgroundImage:
-                                      NetworkImage("${user_gg?.photoURL}"),
-                                  radius: 20,
-                                  // child: Image.network("${user_gg.photoURL}"),
-                                )
-                              : Container(),
-                          user_gg?.displayName != null
-                              ? Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 10),
-                                    child: Text("${user_gg?.displayName}",
-                                        overflow: TextOverflow.ellipsis),
-                                  ),
-                                )
-                              : Container(),
-                        ],
-                      ),
-                    )
-                  : BlocBuilder<AuthenticationBloc, AuthenticationState>(
-                      builder: (context, state) {
-                        if (state is AuthenticationStateSuccess) {
-                          return Row(
-                            children: [
-                              state.user.avatar_path != null
-                                  ? CircleAvatar(
-                                      backgroundImage: NetworkImage(
-                                          "${state.user.avatar_path}"),
-                                      radius: 20,
-                                      // child: Image.network("${user_gg.photoURL}"),
-                                    )
-                                  : CircleAvatar(
-                                      backgroundImage: NetworkImage(
-                                          "https://www.seekpng.com/png/detail/428-4287240_no-avatar-user-circle-icon-png.png"),
-                                      radius: 20,
-                                      // child: Image.network("${user_gg.photoURL}"),
+        drawer: Drawer(
+          // Add a ListView to the drawer. This ensures the user can scroll
+          // through the options in the drawer if there isn't enough vertical
+          // space to fit everything.
+          child: ListView(
+            // Important: Remove any padding from the ListView.
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                ),
+                child: user_gg != null
+                    ? Padding(
+                        padding: EdgeInsets.only(left: 0),
+                        child: Row(
+                          children: [
+                            user_gg?.photoURL != null
+                                ? CircleAvatar(
+                                    backgroundImage:
+                                        NetworkImage("${user_gg?.photoURL}"),
+                                    radius: 20,
+                                    // child: Image.network("${user_gg.photoURL}"),
+                                  )
+                                : Container(),
+                            user_gg?.displayName != null
+                                ? Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 10),
+                                      child: Text("${user_gg?.displayName}",
+                                          overflow: TextOverflow.ellipsis),
                                     ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  state.user.username,
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 20),
+                                  )
+                                : Container(),
+                          ],
+                        ),
+                      )
+                    : BlocBuilder<AuthenticationBloc, AuthenticationState>(
+                        builder: (context, state) {
+                          if (state is AuthenticationStateSuccess) {
+                            return Row(
+                              children: [
+                                state.user.avatar_path != null
+                                    ? CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                            "${state.user.avatar_path}"),
+                                        radius: 20,
+                                        // child: Image.network("${user_gg.photoURL}"),
+                                      )
+                                    : CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                            "https://www.seekpng.com/png/detail/428-4287240_no-avatar-user-circle-icon-png.png"),
+                                        radius: 20,
+                                        // child: Image.network("${user_gg.photoURL}"),
+                                      ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    state.user.username,
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 20),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          );
-                        } else {
-                          return Container();
-                        }
-                      },
+                              ],
+                            );
+                          } else {
+                            return Container();
+                          }
+                        },
+                      ),
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.logout,
+                  color: Colors.blue,
+                ),
+                title: Text(logout_text),
+                onTap: () {
+                  context.read<AuthBloc>().add(SignOutRequested());
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.language,
+                  color: Colors.blue,
+                ),
+                title: Text('English'),
+                onTap: () {
+                  _language..add(LoadLanguage(locale: Locale('en', 'EN')));
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.language,
+                  color: Colors.blue,
+                ),
+                title: Text('VietNam'),
+                onTap: () {
+                  _language..add(LoadLanguage(locale: Locale('vi', '')));
+                },
+              ),
+            ],
+          ),
+        ),
+        key: secondScreenKey,
+        appBar: AppBar(
+          title: TextButton(
+            onPressed: () {
+              _scrollController.jumpTo(0);
+            },
+            child: Text(
+              title,
+              style: TextStyle(fontSize: 17, color: Colors.white),
+            ),
+          ),
+          backgroundColor: Theme.of(context).primaryColor,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: DropdownButton(
+                dropdownColor: Colors.deepPurpleAccent[100],
+                underline: SizedBox(),
+                value: Language.lang,
+                onChanged: (value) {
+                  setState(() {
+                    if (value == 'VietNam') {
+                      _language..add(LoadLanguage(locale: Locale('vi', '')));
+                    } else
+                      _language..add(LoadLanguage(locale: Locale('en', 'EN')));
+
+                    Language.lang = value.toString();
+                  });
+                },
+                items: Language.languages.map((value) {
+                  return DropdownMenuItem(
+                    value: value,
+                    child: Text(
+                      value,
+                      style: TextStyle(color: Colors.white),
                     ),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.logout,
-                color: Colors.blue,
+                  );
+                }).toList(),
               ),
-              title: Text(logout_text),
-              onTap: () {
-                context.read<AuthBloc>().add(SignOutRequested());
-              },
             ),
-            ListTile(
-              leading: Icon(
-                Icons.language,
-                color: Colors.blue,
+            // IconButton(
+            //   onPressed: () {
+            //     _authenticationBloc.add(LogoutPressed());
+            //     Navigator.of(context).pushAndRemoveUntil(
+            //       MaterialPageRoute(
+            //         builder: (context) => LoginPage(),
+            //       ),
+            //       (route) => false,
+            //     );
+            //   },
+            //   icon: Icon(Icons.logout),
+            // )
+          ],
+        ),
+        body: Column(
+          children: [
+            _searchbar(search_text, context),
+            Container(
+              child: BlocListener<InfinityBloc, InfinityState>(
+                listener: (context, state) {
+                  // if (state.status == MovieStatus.success) {
+                  //   if (_movie.length == 0) {
+                  //     _movie.addAll(state.movieModel);
+                  //   } else if (_movie.length > 0) {
+                  //     _movie.clear();
+                  //     _movie.addAll(state.movieModel);
+                  //   }
+                  // }
+                  // print(state.status.toString());
+                },
+                child: BlocBuilder<InfinityBloc, InfinityState>(
+                  builder: (context, state) {
+                    switch (state.status) {
+                      case MovieStatus.failure:
+                        return const Center(
+                            child: Text('failed to fetch movie'));
+                      case MovieStatus.success:
+                        if (state.movieModel.isEmpty) {
+                          return const Center(child: Text('no movie'));
+                        }
+                        return Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: () async {
+                              context.read<InfinityBloc>().add(Initial());
+                              context
+                                  .read<InfinityBloc>()
+                                  .state
+                                  .movieModel
+                                  .clear();
+                              context.read<InfinityBloc>().add(MovieFetched());
+                            },
+                            child: ListView.builder(
+                              itemBuilder: (BuildContext context, int index) {
+                                return index >= state.movieModel.length
+                                    ? Center(
+                                        child: SizedBox(
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 1.5),
+                                        ),
+                                      )
+                                    : MovieListItem(
+                                        movie: state.movieModel[index],
+                                        index: index,
+                                      );
+                              },
+                              itemCount: state.hasReachedMax
+                                  ? state.movieModel.length
+                                  : state.movieModel.length + 1,
+                              controller: _scrollController,
+                            ),
+                          ),
+                        );
+                      default:
+                        return const Center(child: CircularProgressIndicator());
+                    }
+                  },
+                ),
               ),
-              title: Text('English'),
-              onTap: () {
-                _language..add(LoadLanguage(locale: Locale('en', 'EN')));
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.language,
-                color: Colors.blue,
-              ),
-              title: Text('VietNam'),
-              onTap: () {
-                _language..add(LoadLanguage(locale: Locale('vi', '')));
-              },
             ),
           ],
         ),
-      ),
-      key: secondScreenKey,
-      appBar: AppBar(
-        title: Text(
-          title,
-          style: TextStyle(fontSize: 17),
-        ),
-        backgroundColor: Theme.of(context).primaryColor,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: DropdownButton(
-              dropdownColor: Colors.deepPurpleAccent[100],
-              underline: SizedBox(),
-              value: Language.lang,
-              onChanged: (value) {
-                setState(() {
-                  FocusScope.of(context).requestFocus(FocusNode());
-                  if (value == 'VietNam') {
-                    // BlocProvider.of<LanguageBloc>(context)
-                    //   ..add(LoadLanguage(locale: Locale('vi', '')));'
-                    _language..add(LoadLanguage(locale: Locale('vi', '')));
-                  } else
-                    // BlocProvider.of<LanguageBloc>(context)
-                    //   ..add(LoadLanguage(locale: Locale('en', 'EN')));
-                    _language..add(LoadLanguage(locale: Locale('en', 'EN')));
-
-                  Language.lang = value.toString();
-                });
-              },
-              items: Language.languages.map((value) {
-                return DropdownMenuItem(
-                  value: value,
-                  child: Text(
-                    value,
-                    style: TextStyle(color: Colors.white),
+        floatingActionButton:
+            BlocBuilder<InfinityBloc, InfinityState>(builder: (context, state) {
+          return state.movieModel.length > 20
+              ? IconButton(
+                  icon: Icon(
+                    Icons.arrow_circle_up,
+                    color: Colors.blue,
+                    size: 40,
                   ),
-                );
-              }).toList(),
-            ),
-          ),
-          // IconButton(
-          //   onPressed: () {
-          //     _authenticationBloc.add(LogoutPressed());
-          //     Navigator.of(context).pushAndRemoveUntil(
-          //       MaterialPageRoute(
-          //         builder: (context) => LoginPage(),
-          //       ),
-          //       (route) => false,
-          //     );
-          //   },
-          //   icon: Icon(Icons.logout),
-          // )
-        ],
-      ),
-      body: Column(
-        children: [
-          _searchbar(search_text, context),
-          Container(
-            child: BlocListener<InfinityBloc, InfinityState>(
-              listener: (context, state) {
-                // if (state.status == MovieStatus.success) {
-                //   if (_movie.length == 0) {
-                //     _movie.addAll(state.movieModel);
-                //   } else if (_movie.length > 0) {
-                //     _movie.clear();
-                //     _movie.addAll(state.movieModel);
-                //   }
-                // }
-                // print(state.status.toString());
-              },
-              child: BlocBuilder<InfinityBloc, InfinityState>(
-                builder: (context, state) {
-                  // if (state is LoadedState) {
-                  //   return _handleUserResponseList(state);
-                  // } else {
-                  //   return CircularProgressIndicator();
-                  // }
-                  switch (state.status) {
-                    case MovieStatus.failure:
-                      return const Center(child: Text('failed to fetch movie'));
-                    case MovieStatus.success:
-                      if (state.movieModel.isEmpty) {
-                        return const Center(child: Text('no movie'));
-                      }
-                      return Expanded(
-                        child: RefreshIndicator(
-                          onRefresh: () async {
-                            context.read<InfinityBloc>().add(Initial());
-                            context
-                                .read<InfinityBloc>()
-                                .state
-                                .movieModel
-                                .clear();
-                            context.read<InfinityBloc>().add(MovieFetched());
-                          },
-                          child: ListView.builder(
-                            itemBuilder: (BuildContext context, int index) {
-                              return index >= state.movieModel.length
-                                  ? Center(
-                                      child: SizedBox(
-                                        height: 24,
-                                        width: 24,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 1.5),
-                                      ),
-                                    )
-                                  : MovieListItem(
-                                      movie: state.movieModel[index],
-                                      index: index,
-                                    );
-                            },
-                            itemCount: state.hasReachedMax
-                                ? state.movieModel.length
-                                : state.movieModel.length + 1,
-                            controller: _scrollController,
-                          ),
-                        ),
-                      );
-                    default:
-                      return const Center(child: CircularProgressIndicator());
-                  }
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+                  onPressed: () {
+                    _scrollController.jumpTo(0);
+                  })
+              : Container();
+        }));
   }
 
   Widget _searchbar(String search_text, BuildContext seachContext) {
@@ -301,15 +310,10 @@ class _MoviesPageState extends State<MoviesPage> {
       padding: const EdgeInsets.all(8.0),
       child: TextField(
         showCursor: false,
-        // focusNode: FocusNode(
-        //   canRequestFocus: false,
-        // ),
-        // autofocus: false,
-        // controller: editingController,
+        controller: editingController,
         autocorrect: false,
         onTap: () async {
           // FocusScope.of(seachContext).unfocus();
-          // editingController.clear();
 
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -328,17 +332,8 @@ class _MoviesPageState extends State<MoviesPage> {
           //       ctx: context),
           // );
         },
-        // onChanged: (text) {
-        //   _searchBloc.add(
-        //     TextChanged(text: text),
-        //   );
-        // },
         decoration: InputDecoration(
           prefixIcon: const Icon(Icons.search),
-          // suffixIcon: GestureDetector(
-          //   onTap: _onClearTapped,
-          //   child: const Icon(Icons.clear),
-          // ),
           border: InputBorder.none,
           hintText: '${search_text}',
         ),

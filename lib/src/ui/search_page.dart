@@ -85,6 +85,7 @@ class _SearchPageState extends State<SearchPage> {
                 editingController.text = '';
                 _searchBloc.add(const TextChanged(text: ''));
                 Navigator.pop(searchContext);
+                FocusScope.of(context).unfocus();
               },
             ),
           ),
