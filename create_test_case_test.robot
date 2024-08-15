@@ -1,678 +1,371 @@
-*** Settings ***
-Library     RequestsLibrary
-Library     JSONLibrary
-Library     Collections
-Library     String
-Resource    ../../../resources/page_objects/project_test_case.robot
+#############################################################################################################
+#   © 2020-2023 Nokia. Nokia confidential and proprietary.                                                  #
+#   Licensed materials restricted solely to Nokia authorized users for legitimate business purposes only.   #
+#   The actual or attempted unauthorized use or modification of this code is strictly prohibited by Nokia.  #
+#   Use pursuant to Company instructions.                                                                   #
+#############################################################################################################
 
-Suite Setup  Run keywords   utils.Get JWT From Keycloak     admin
-    ...            AND      utils.Get JWT From Keycloak     user_1
-    ...            AND      utils.Create Custom Field For Test    ${create_test_case_request_path}     0     7
-    ...            AND      utils.Create Project Template For Test     ${create_test_case_request_path}   7     8
-    ...            AND      utils.Create Project For Test           ${create_test_case_request_path}    8      9
-    ...            AND      utils.Create Test Case Template For Test    ${create_test_case_request_path}    9    10 
-Suite Teardown  Run keywords   utils.Delete Test Case Template For Test    @{test_case_template_name_list}
-    ...            AND     utils.Delete Project For Test    @{prefix_name_list}
-    ...            AND     utils.Delete Project Template For Test    @{template_name_list}
-    ...            AND     utils.Delete Custom Field For Test    @{cfield_name_list}
+*** Settings ***
+Documentation        This test is intended to test LAG resiliency feature
+
+Resource             sats.robot
+Suite Setup          Initialization
+Suite Teardown       Finalization
+
+Metadata    nta_tcid    FL-3
+
+*** Variables ***
+
+${R5_hostname}                                  10.10.10.5          #DUT IP Address
+${R5_username}                                  admin               #DUT username
+${R5_password}                                  N0K5A-SATS          #DUT password
+
+${R5_lag_id}                                    56                  #LAG ID 
+
+${traffic_generator_client_ip}                  10.10.10.7          #Traffic Generator Client IP Address
+${traffic_generator_client_port}                8888                #Traffic Generator Client Port
+${traffic_generator_type}                       STC.REST            #IXIA.Rest, STC.Rest, TCPReplay or iPerf3
+${traffic_generator_file_name}                  lag_link_resiliency.xml   #Traffic Generator Template File Name 
 
 *** Test Cases ***
-Test Create Test Case Success With Full Valid Data
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with full data
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   10    ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_200}
+Check LAG State And Port State
 
-Test Create Test Case Success With Required Data Only And Non-required Data Is Null
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with required data only:
-                ...                         precondition, scenario, tags, cfields = null
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   11     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}   ${status_code_200}
+    ${oper_status}                              Get LAG Oper Status
+    ...                                         ${R5_lag_id}
+         
+    IF                              '${oper_status.upper()}' != 'UP'
+      Fail     LAG ${R5_lag_id} is not in UP state
+    END
+    Send SROS Command And Log 
+    ...                                         show lag ${R5_lag_id}
 
-Test Create Test Case Success With Required Data Only And Not Have Non-required Data
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with required data only:
-                ...                         Not have precondition, scenario, tags, cfields, state, complexity, priority
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   12     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_200}
+    ${up_ports}                                 Get Up Ports List in a Lag
+    ...                                         ${R5_lag_id}
 
-Test Create Test Case Success With Custom Fields Not Exist
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with custom fields not exist
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201 and warning message
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   13     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    utils.Check Warning Message   ${response}     cfield    not-exist-cfield
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_200}
+    Set Suite Variable                          ${up_ports}
 
-Test Create Test Case Fail With No Test Case Title
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with no test case title
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   14     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${up_port_count}                            Get Length   ${up_ports}
+         
+    IF                               '${up_port_count}' < '2'
+      Fail     LAG ${R5_lag_id} doesn't have at least two up ports
+    END
+    Log To Report                               Up port count is ${up_port_count}
 
-Test Create Test Case Fail With Test Case Title Is Null
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with test case title is null
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   15     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_null_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}   ${status_code_any}
+    Set Suite Variable                          ${up_port_count}                            
 
-#Test Create Test Case Fail With Test Case Title Exceed Max Length
-#    [Documentation]
-#                ...    API Name:            Create Test Case
-#                ...    Confirm Content:     Create test case fail with test case title exceed max length
-#                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-#                ...                        2. There is already at least 1 project template
-#                ...                        3. There is already at least 1 project
-#                ...                        4. There is already at least 1 test case template
-#                ...    Result:              Create fail with status code = 422
-#    [Tags]
-#    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   16     ${status_code_any}
-#    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-#    ...                                                         ${validate_max_length_50_msg}
-#    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}   ${status_code_any}
+    Send SROS Command And Log 
+    ...                                         show lag ${R5_lag_id} port                                     
 
-Test Create Test Case Success With Duplicate Test Case Title
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with duplicate test case title
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    project_test_case.Create Test Case     ${create_test_case_request_path}   10     ${status_code_201}
-    ${test_case_id_1}=  set variable    ${test_case_id}
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   10     ${status_code_any}
-    ${test_case_id_2}=  set variable    ${test_case_id}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}
-    ...                                        ${create_success_msg}
-    [Teardown]  run keywords  project_test_case.Delete Test Case By ID   ${test_case_id_1}    ${status_code_200}
-    ...         AND           project_test_case.Delete Test Case By ID   ${test_case_id_2}    ${status_code_200}
+    FOR  ${item}  IN  @{up_ports}
 
-Test Create Test Case Fail With No Project
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with no project
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   17     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+        Send SROS Command And Log 
+        ...                                     show port ${item} | match expression "Admin State|Oper State"
 
-Test Create Test Case Fail With Project Is Null
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with project is null
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   18     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_null_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    END
 
-Test Create Test Case Fail With Project Exceed Max Length
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with project exceed max length
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   19     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_max_length_50_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+Check That LAG Not Receive Any Traffic
 
-Test Create Test Case Fail With Invalid Project
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid project
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   20     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                        ${create_test_case_project_not_found_msg}
-    [Teardown]    project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${command}                                  Monitor Command For All Ports
+    ...                                         ${up_ports}
 
-Test Create Test Case Fail With No Summary
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with no summary
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   21     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${output}                                   Send SROS Command And Parse
+    ...                                         ${command}
 
-Test Create Test Case Fail With Summary Is Null
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with summary is null
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   22     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_null_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${first_results}                            Construct Tree From Lists   ${output}
 
-#Test Create Test Case Fail With Summary Exceed Max Length
-#    [Documentation]
-#                ...    API Name:            Create Test Case
-#                ...    Confirm Content:     Create test case fail with summary exceed max length
-#                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-#                ...                        2. There is already at least 1 project template
-#                ...                        3. There is already at least 1 project
-#                ...                        4. There is already at least 1 test case template
-#                ...    Result:              Create fail with status code = 422
-#    [Tags]
-#    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   23     ${status_code_any}
-#    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-#    ...                                                         ${validate_max_length_5000_msg}
-#    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${sum_of_packets}                           Set Variable    0   
 
-Test Create Test Case Fail With No Template
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with no template
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   24     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    FOR  ${item}  IN  @{up_ports}
 
-Test Create Test Case Fail With Template Is Null
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with template is null
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   25     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_null_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+        ${sum_of_packets}=                      Evaluate    
+        ...                                     ${first_results['3 sec']['${item}']['Packets'][1][1]} + ${sum_of_packets}
+    END
 
-Test Create Test Case Fail With Template Exceed Max Length
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with template exceed max length
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   26     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_max_length_50_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${average}                                  Evaluate
+    ...                                         ${sum_of_packets} / ${up_port_count}
 
-Test Create Test Case Fail With Template Not Exist
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with template not exist
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   27     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_404}
-    ...                                                         ${create_test_case_template_not_found_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    IF                              ${average} > 1000
+      Fail     LAG ${R5_lag_id} is receiving traffic
+    END
 
-Test Create Test Case Fail With No Mode, est_man_exec_time
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with no mode, est_man_exec_time
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   28     ${status_code_any}
-    Check Response With List Of Error Fields And Error Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_msg}   mode    est_man_exec_time
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${output}                                   Get Last SROS Command Output
 
-Test Create Test Case Fail With Invalid State
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid state
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   29     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                               ${create_test_case_invalid_state_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${output_with_command}                      Catenate        ${command}     \n${output}
 
-Test Create Test Case Fail With Invalid Mode
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid mode
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   30     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}   ${status_code_422}
-    ...                                               ${test_case_invalid_mode_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    Log To Report With Prompt                   ${output_with_command}
 
-Test Create Test Case Fail With Invalid Priority
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid priority
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   31     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${test_case_invalid_priority_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+Start Traffic And Check That Lag Receiving Traffic
 
-Test Create Test Case Fail With Invalid Complexity
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid complexity
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   32     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${test_case_invalid_complexity_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    Start Traffic
 
-Test Create Test Case Fail With est_man_exec_time Is Not Float
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with est_man_exec_time is not float
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   33     ${status_code_any}
-    Check Response With List Of Error Fields And Error Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_invalid_float_msg}    est_man_exec_time
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    Log To Console                              \nWaiting 10 seconds for traffic flow
+    Log To Report                               Waiting 10 seconds for traffic flow
+    Sleep                                       10 
 
-Test Create Test Case Fail With Input Custom Field Has Value Exceed Length
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with input custom field has value exceed length
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   34     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${create_project_invalid_input_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${command}                                  Monitor Command For All Ports
+    ...                                         ${up_ports}
 
-Test Create Test Case Fail With Password Custom Field Has Value Exceed Length
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with password custom field has value exceed length
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   35     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${create_project_invalid_password_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${output}                                   Send SROS Command And Parse
+    ...                                         ${command}
 
-Test Create Test Case Fail With Textarea Custom Field Has Value Exceed Length
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with textarea custom field has value exceed length
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   36     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${create_project_invalid_textarea_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${traffic_results}                          Construct Tree From Lists    ${output}
 
-Test Create Test Case Fail With Richtextarea Custom Field Has Value Exceed Length
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with richtextarea custom field has value exceed length
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   37     ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${create_project_invalid_richtextarea_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    Calculate Mbits and Verify Traffic State For All Ports
+    ...                                         ${traffic_results}
+    ...                                         ${up_ports}
 
-Test Create Test Case Fail With Radio Custom Field Has Value Is Not Boolean
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with radio custom field has value is not boolean
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   38     ${status_code_any}
-    ${value}=       project_test_case.Get Value Of Custom Field When Create Test Case
-    ...                                                                      ${create_test_case_request_path}   38
-    ${invalid_radio_value_msg}=     replace string    ${create_project_invalid_radio_value_msg}   input_value  ${value}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${invalid_radio_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${output}                                   Get Last SROS Command Output
 
-Test Create Test Case Fail With Checkbox Custom Field Has Value Is Not Boolean
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with checkbox custom field has value is not boolean
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   39     ${status_code_any}
-    ${value}=       project_test_case.Get Value Of Custom Field When Create Test Case
-    ...                                                                         ${create_test_case_request_path}   39
-    ${invalid_checkbox_value_msg}=    replace string    ${create_project_invalid_checkbox_value_msg}   input_value  ${value}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${invalid_checkbox_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    ${output_with_command}                      Catenate        ${command}     \n${output}
 
-Test Create Test Case Fail With Dropdown Custom Field Has Value Is Not In Option List
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:   Create test case fail with dropdown custom field has value is not in option list
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   40     ${status_code_any}
-    ${value}=       project_test_case.Get Value Of Custom Field When Create Test Case
-    ...                                                                     ${create_test_case_request_path}   40
-    ${invalid_dropdown_value_msg}=   replace string    ${create_project_invalid_dropdown_value_msg}   input_value  ${value}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}
-    ...                                                         ${invalid_dropdown_value_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    Log To Report With Prompt                   ${output_with_command}
 
-Test Create Test Case Fail With Invalid Precondition Format
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid precondition format
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   41     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_null_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+Fail One Port And Check Other Port Receiving All Traffic
 
-Test Create Test Case Fail With Invalid Scenario Format
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid scenario format
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   42     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    Send SROS Command And Log 
+    ...                                         /configure port ${up_ports[0]} shutdown
 
-Test Create Test Case Fail With Invalid Tags Format
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid tags format
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 422
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   43     ${status_code_any}
-    utils.Check Response Status And Detail Message    ${response}    ${status_code_422}
-    ...                                                         ${validate_require_null_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID   ${test_case_id}    ${status_code_any}
+    FOR  ${item}  IN  @{up_ports}
 
-Test Create Test Case Success With Reuse_tc_id Is False
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with reuse_tc_id is false
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-                ...                         and tc_id is auto-increment from last tc_id
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   10    ${status_code_any}
-    ${test_case_id_1}=  set variable  ${test_case_id}
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   11    ${status_code_any}
-    ${test_case_id_2}=  set variable  ${test_case_id}
-    project_test_case.Delete Test Case By ID    ${test_case_id_1}    ${status_code_200}
-    ${response}=    project_test_case.Create Test Case With Reuse Flag     ${create_test_case_request_path}   12
-    ...                                                                    ${status_code_any}     false
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    project_test_case.Compare Index Of Test Case When Reuse Flag Is False    ${test_case_id_2}    ${test_case_id}
-    ...                                                                      ${test_case_project}
-    [Teardown]  run keywords  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_200}
-    ...         AND           project_test_case.Delete Test Case By ID    ${test_case_id_2}    ${status_code_200}
+        Send SROS Command And Log 
+        ...                                     show port ${item} | match expression "Admin State|Oper State"
 
-Test Create Test Case Success With Reuse_tc_id Is True
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with reuse_tc_id is true
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-                ...                         and tc_id is re-use from the deleted tc_id
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   10    ${status_code_any}
-    ${test_case_id_1}=  set variable  ${test_case_id}
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   11    ${status_code_any}
-    ${test_case_id_2}=  set variable  ${test_case_id}
-    project_test_case.Delete Test Case By ID    ${test_case_id_1}    ${status_code_200}
-    ${response}=    project_test_case.Create Test Case With Reuse Flag     ${create_test_case_request_path}   12
-    ...                                                                    ${status_code_any}     true
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    project_test_case.Compare Index Of Test Case When Reuse Flag Is True    ${test_case_id_1}    ${test_case_id}
-    ...                                                                     ${test_case_project}
-    [Teardown]  run keywords  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_200}
-    ...         AND           project_test_case.Delete Test Case By ID    ${test_case_id_2}    ${status_code_200}
+    END
 
-Test Create Test Case Success With Valid Test Case Id
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with valid test case id
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   44    ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    project_test_case.Compare Test Case Id    ${create_test_case_request_path}   44    ${test_case_id}
-    [Teardown]  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_200}
+    Sleep                                       2
 
-Test Create Test Case Success With Valid Test Case Id And Reuse_tc_id Is True
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with valid test case id and reuse_tc_id is true
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    ${response}=    project_test_case.Create Test Case With Reuse Flag     ${create_test_case_request_path}   44
-    ...                                                                    ${status_code_any}    true
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    project_test_case.Compare Test Case Id    ${create_test_case_request_path}   44    ${test_case_id}
-    [Teardown]  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_200}
+    ${shut_port}                                Set Variable
+    ...                                         ${up_ports[0]}
 
-Test Create Test Case Success With Null Test Case Id
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case success with null test case id
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create success with status code = 201
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   45    ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_201}    ${create_success_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_200}
+    Set Suite Variable                          ${shut_port}
 
-Test Create Test Case Fail With Invalid Test Case Id
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with invalid test case id
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   46    ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}    ${test_case_invalid_format_id_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID    ${test_case_id}    ${status_code_any}
+    Remove Values From List
+    ...                                         ${up_ports}
+    ...                                         ${up_ports[0]}                                 
 
-Test Create Test Case Fail With Duplicate Test Case Id
-    [Documentation]
-                ...    API Name:            Create Test Case
-                ...    Confirm Content:     Create test case fail with duplicate test case id
-                ...    Pre-condition:　　　　1.There are alreary 7 custom fields with 7 types
-                ...                        2. There is already at least 1 project template
-                ...                        3. There is already at least 1 project
-                ...                        4. There is already at least 1 test case template
-                ...    Result:              Create fail with status code = 400
-    [Tags]
-    project_test_case.Create Test Case     ${create_test_case_request_path}   10    ${status_code_201}
-    ${test_case_id_1}=    set variable  ${test_case_id}
-    ${response}=    project_test_case.Create Test Case     ${create_test_case_request_path}   47    ${status_code_any}
-    utils.Check Response Status And Message    ${response}    ${status_code_400}    ${test_case_duplicate_id_msg}
-    [Teardown]  project_test_case.Delete Test Case By ID    ${test_case_id_1}    ${status_code_any}
+    ${command}=                                 Monitor Command For All Ports
+    ...                                         ${up_ports}
+
+    ${output}                                   Send SROS Command And Parse
+    ...                                         ${command}                        
+
+    ${traffic_results}                          Construct Tree From Lists    ${output}
+
+    Calculate Mbits and Verify Traffic State For All Ports
+    ...                                         ${traffic_results}
+    ...                                         ${up_ports}
+
+    ${output}                                   Get Last SROS Command Output
+
+    ${output_with_command}                      Catenate        ${command}     \n${output}
+
+    Log To Report With Prompt                   ${output_with_command}
+
+    Stop Traffic
+
+Get Traffic Results And Revert Changes
+
+    ${droprate}                                 Log Results
+
+    Should Be True                              ${droprate} <= 0.05
+    ...                                         Drop rate is not lower than 0.05
+
+    Send SROS Command And Log 
+    ...                                         /configure port ${shut_port} no shutdown
+
+    Sleep                                       1
+
+    ${last_up_ports}                            Get Up Ports List in a Lag
+    ...                                         ${R5_lag_id}
+
+    ${len}                                      Get Length   ${last_up_ports}
+
+    Should Be True                              '${len}' == '${up_port_count}'
+    ...                                         Initial and last operational up port count for LAG ${R5_lag_id} is not same
+
+    FOR  ${item}  IN  @{last_up_ports}
+
+        Send SROS Command And Log 
+        ...                                     show port ${item} | match expression "Admin State|Oper State"
+
+    END
+
+*** Keywords ***
+Initialization
+  SROS Connect
+  ...  sros_address=${R5_hostname}
+  ...  username=${R5_username}
+  ...  password=${R5_password}
+  ...  timeout=5 minutes
+  ...  port=22
+
+Finalization
+  SROS Disconnect All
+  Close Traffic Generator Session
+
+Get Up Ports List in a Lag
+  [Arguments]                                   ${lag-id}
+
+  ${output}=                                    Send SROS Command And Parse
+  ...                                           show lag ${lag-id} port
+
+  ${lag_up_ports}=                              Filter Table By Values
+  ...                                           rowlist=${output}
+  ...                                           searchcolumn=5
+  ...                                           searchvalues=up
+
+  ${lag_up_ports_list}=                         Create List
+  
+  FOR  ${up_ports}  IN  @{lag_up_ports}
+    
+    IF                                      "${up_ports[4]}" != "down"
+      Append To List                         ${lag_up_ports_list}  ${up_ports[2]}
+    END
+  END
+
+  [Return]                                      ${lag_up_ports_list}
+
+Monitor Command For All Ports
+    
+    [Arguments]
+    ...                                     ${ports}
+
+    ${len}                                  Get Length   ${ports}
+
+    ${command}                              Set Variable    ${EMPTY}
+    FOR  ${item}  IN RANGE  ${len}
+
+        ${command}=                         Catenate        ${ports[${item}].strip()}     ${command.strip()}
+  
+    END
+    #Including all ports to one command
+   
+    IF                                      '${len}' == '1'
+      ${command}                            Set Variable  monitor port ${ports[0]} rate interval 3 repeat 
+    
+    ELSE    
+      ${command}                            Set Variable  monitor port ${command} rate interval 3 repeat 1
+    
+    END
+
+    [Return]                                ${command}
+
+Calculate Mbits and Verify Traffic State For All Ports
+
+    [Arguments]
+    ...             ${results}
+    ...             ${ports}
+
+    ${sum_of_octets}=                       Set Variable    0
+
+    ${len}                                  Get Length      ${ports}
+
+    #Getting all output octets to calculate average
+
+    FOR  ${item}  IN  @{ports}
+           
+        IF                                  '${len}' == '1'
+          ${item}                           Set Variable  Port ${item}
+        
+        ELSE    
+          ${item}                            Set Variable  ${item}
+        
+        END
+
+        ${sum_of_octets}=                   Evaluate    
+        ...                                 ${results['3 sec']['${item}']['Octets'][1][1]} + ${sum_of_octets}
+    END
+
+    ${average}                              Evaluate
+    ...                                     ${sum_of_octets} / ${len}
+
+    Log To Report                           Sum of all port octets are ${sum_of_octets}
+    
+    #Calculating average Mbps value for all ports
+    ${mbits}                                Evaluate
+    ...                                     ${average} / 1048576
+
+    ${x}                                    Convert To Number      ${mbits}  1                     
+
+    Log To Report                           Average for all port rate is ${x} Mbps
+
+    #Setting threshold value to half of average
+    ${threshold_value}                      Evaluate
+    ...                                     ${mbits} * 0.5
+
+    #Minimum value for traffic flow
+    ${min_value}                            Evaluate
+    ...                                     ${mbits} - ${threshold_value}
+
+    ${x}                                    Convert To Number      ${min_value}  1
+
+    Log To Report                           Expected minimum rate value is ${x} Mbps
+    #Maximum value for traffic flow
+    ${max_value}                            Evaluate
+    ...                                     ${mbits} + ${threshold_value}
+
+    ${x}                                    Convert To Number      ${max_value}  1
+    Log To Report                           Expected maximum rate value is ${x} Mbps
+
+    #Comparing port statistics with average port value, if port rate is lower than related minimum value of port rate is higher than related max value test will fail
+    FOR  ${item}  IN   @{ports}
+                       
+
+        IF                                  '${len}' == '1'
+          ${item}                           Set Variable  Port ${item}
+        
+        ELSE    
+          ${item}                           Set Variable  ${item}
+        
+        END
+
+        ${mbits_port}                       Evaluate
+        ...                                 ${results['3 sec']['${item}']['Octets'][1][1]} / 1048576
+        ${x}                                Convert To Number      ${mbits_port}  1
+        Log To Report                       For port ${item} rate is ${x} Mbps
+
+        Should Be True                      ${min_value} <= ${mbits_port}   Octets for ${item} is not higher than Min value, port rate is ${x}
+        Should Be True                      ${max_value} >= ${mbits_port}   Octets for ${item} is higher than Max value, port rate is ${x}
+
+    END
+
+Start Traffic
+
+    ###Connecting to Tester
+    Use Traffic Generator
+    ...                                     generator=${traffic_generator_type}
+
+    Open Traffic Generator Session
+    ...                                     hostname=${traffic_generator_client_ip}
+    ...                                     port=${traffic_generator_client_port}
+    ...                                     timeout=1000
+
+    ###Applying Configuration File
+    Apply Configuration From File
+    ...                                     filename=${traffic_generator_file_name}
+
+    ###Starting Traffic
+
+    Start Traffic Generation
+
+Stop Traffic
+
+    ###Stopping Traffic
+
+    Stop Traffic Generation
+
+Log Results
+
+  ${results}=         Get Traffic Results
+
+  ${txframes}=        Get Transmitted Frame Count
+  ${rxframes}=        Get Received Frame Count
+  ${dropcount}=       Get Dropped Frame Count
+  ${droppercent}=     Get Dropped Frame Percentage
+
+  Log To Report       \nTransmitted Frames: ${txframes}\nReceived Frames: ${rxframes}\nDropped Frames: ${dropcount}\nDrop Rate: ${droppercent} %
+  Log To Console      \nTransmitted Frames: ${txframes}\nReceived Frames: ${rxframes}\nDropped Frames: ${dropcount}\nDrop Rate: ${droppercent} %
+  Should Be True      int(${txframes}) > 0
+  Should Be True      int(${rxframes}) > 0
+
+  [Return]            ${droppercent}
